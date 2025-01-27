@@ -6,11 +6,17 @@ Welcome to the **ESP32-STM32 AT Command Interface** repository! This project dem
 
 ```
 ESP32-STM32_AT_Interface/
-├── src/                # Source code for STM32F030R8
-│   ├── main.c          # Main application entry point
-│   ├── uart.c          # UART driver for STM32
-│   ├── esp32_at.c      # AT command handling for ESP32
-│   └── esp32_at.h      # Header file for AT command handler
+├── esp32_project/      # PlatformIO project for ESP32-C3 Dev Kit v2
+│   ├── src/            # Source code for ESP32
+│   │   └── main.cpp    # Optional custom code for ESP32
+│   └── platformio.ini  # PlatformIO configuration for ESP32
+├── stm32_project/      # PlatformIO project for STM32F030R8
+│   ├── src/            # Source code for STM32
+│   │   ├── main.c      # Main application entry point
+│   │   ├── uart.c      # UART driver for STM32
+│   │   ├── esp32_at.c  # AT command handling for ESP32
+│   │   └── esp32_at.h  # Header file for AT command handler
+│   └── platformio.ini  # PlatformIO configuration for STM32
 ├── esp32_firmware/     # ESP32 AT firmware setup files
 │   ├── README.md       # Steps to flash ESP32 with AT firmware
 │   ├── AT-firmware.bin # ESP32 AT firmware binary
@@ -54,13 +60,23 @@ This repository is a **platform for AT command communication** between the ESP32
   - **GND** → **GND**
 - Refer to the `wiring_diagram.png` in the `doc` folder for details.
 
-### 3. Build and Upload STM32 Code
-1. Clone the repository:
+### 3. Build and Upload ESP32 Code
+1. Navigate to the `esp32_project/` directory.
+2. Open the project in PlatformIO IDE or use the terminal:
    ```bash
-   git clone https://github.com/yourusername/ESP32-STM32_AT_Interface.git
+   pio run --target upload
    ```
-2. Open the STM32 project in your IDE (e.g., STM32CubeIDE).
-3. Build and flash the firmware onto the STM32F030R8.
+3. Monitor serial output for debugging:
+   ```bash
+   pio device monitor
+   ```
+
+### 4. Build and Upload STM32 Code
+1. Navigate to the `stm32_project/` directory.
+2. Open the project in PlatformIO IDE or use the terminal:
+   ```bash
+   pio run --target upload
+   ```
 
 ## Usage
 
@@ -68,7 +84,6 @@ This repository is a **platform for AT command communication** between the ESP32
 2. Open a serial monitor to view debug output from the STM32.
 3. Send AT commands from the STM32 to the ESP32 (e.g., `AT+CWJAP="SSID","PASSWORD"`).
 4. Observe responses from the ESP32 and verify functionality.
-
 
 ## Contributing
 
