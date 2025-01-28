@@ -1,20 +1,27 @@
 #include "hal/uart.h"
-#include "stm32f0xx_hal.h"  // Include HAL for UART_HandleTypeDef
+#include "stm32f0xx_hal.h"
 
 #include <stdio.h>
 #include <string.h>
-
-/* Define UART Handle */
-UART_HandleTypeDef huart1;
 
 /* Function prototypes */
 void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
 
-/* Implementing printf over UART */
+/* Function to handle received UART data */
+void uart_rx_handler(uint8_t received_byte) {
+    // Example: Echo received data
+    uart_send(&received_byte, 1);
+
+    // Future: Process received data or trigger events
+}
+
+/* Implementing printf over UART using buffer */
 int __io_putchar(int ch) {
-    uint8_t c = ch;
-    uart_send(&c, 1);
+    uint8_t c = (uint8_t)ch;
+    if (uart_send(&c, 1) != HAL_OK) {
+        // Handle UART send error (optional)
+    }
     return ch;
 }
 
@@ -23,18 +30,25 @@ int main(void)
     /* Initialize the HAL library (includes setting up SysTick) */
     HAL_Init();
 
-    /* Configure the system clock (8 MHz from HSI, no PLL here) */
+    /* Configure the system clock */
     SystemClock_Config();
 
     /* Initialize GPIO (for LED on PA5) */
     MX_GPIO_Init();
 
-    /* Initialize UART using HAL */
-    uart_init();
+    /* Initialize UART and set receive callback */
+    if (uart_init() != HAL_OK) {
+        // Handle UART initialization error (e.g., blink LED rapidly)
+        while (1) {
+            HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_5);
+            HAL_Delay(100);
+        }
+    }
+
+    uart_set_rx_callback(uart_rx_handler);
 
     /* Print "UART is initialized" message */
-    const char *initMsg = "UART is initialized with interrupts\r\n";
-    uart_send((const uint8_t*)initMsg, strlen(initMsg));
+    printf("UART is initialized with interrupts\r\n");
 
     /* Main loop: blink LED */
     while (1)
@@ -43,8 +57,7 @@ int main(void)
         HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_5);
         HAL_Delay(500);
 
-        /* Other tasks can be performed here without blocking */
-        // No polling here
+        /* Other non-blocking tasks can be performed here */
     }
 }
 
@@ -101,17 +114,13 @@ static void MX_GPIO_Init(void)
     GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
     HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
-    /* Optional: start with LED off */
+    /* Start with LED off */
     HAL_GPIO_WritePin(GPIOA, GPIO_PIN_5, GPIO_PIN_RESET);
 }
 
 /* --------------------------------------------------------------------------
-   IMPORTANT: SysTick Handler for the HAL time base
-   --------------------------------------------------------------------------
-   By default, STM32Cube projects include a weak SysTick_Handler() that calls 
-   HAL_IncTick(). If yours doesn't, or if you need to override it, do:
-*/
-
+   SysTick Handler for the HAL time base
+   -------------------------------------------------------------------------- */
 void SysTick_Handler(void)
 {
     HAL_IncTick();
