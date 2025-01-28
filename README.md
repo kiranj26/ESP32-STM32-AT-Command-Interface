@@ -1,94 +1,87 @@
 # ESP32-STM32 AT Command Interface
 
-Welcome to the **ESP32-STM32 AT Command Interface** repository! This project demonstrates communication between the ESP32-C3 Dev Kit v2 and the STM32F030R8 Nucleo board using AT commands over UART. This playground serves as a foundational platform for learning, experimenting, and building projects involving Wi-Fi-enabled applications.
+Welcome to the **ESP32-STM32 AT Command Interface** repository! This project facilitates communication between various STM32 boards and the ESP32-C3 Dev Kit v2 using AT commands over UART. The ESP32 runs the official AT firmware provided by Espressif, while the STM32 handles sending commands and processing responses.
 
-## Repository Structure
-
+## 📁 Repository Structure
 ```
 ESP32-STM32_AT_Interface/
-├── esp32_project/      # PlatformIO project for ESP32-C3 Dev Kit v2
-│   ├── src/            # Source code for ESP32
-│   │   └── main.cpp    # Optional custom code for ESP32
-│   └── platformio.ini  # PlatformIO configuration for ESP32
-├── stm32_project/      # PlatformIO project for STM32F030R8
-│   ├── src/            # Source code for STM32
-│   │   ├── main.c      # Main application entry point
-│   │   ├── uart.c      # UART driver for STM32
-│   │   ├── esp32_at.c  # AT command handling for ESP32
-│   │   └── esp32_at.h  # Header file for AT command handler
-│   └── platformio.ini  # PlatformIO configuration for STM32
-├── esp32_firmware/     # ESP32 AT firmware setup files
-│   ├── README.md       # Steps to flash ESP32 with AT firmware
-│   ├── AT-firmware.bin # ESP32 AT firmware binary
-├── doc/                # Documentation
-│   ├── AT_Command_Set.pdf  # ESP32 AT command reference
-│   ├── wiring_diagram.png # Hardware wiring diagram
-│   └── project_description.md # Detailed project description
-├── README.md           # Project overview and setup instructions
-└── LICENSE             # Repository license (e.g., MIT License)
+├── stm32_project/                  # STM32 PlatformIO Project
+│   ├── include/                    # Header files
+│   │   ├── at/                     # AT command handlers
+│   │   │   ├── wifi.h              # Wi-Fi commands (AT+CWJAP, etc.)
+│   │   │   ├── tcp.h               # TCP/IP commands (AT+CIPSTART, etc.)
+│   │   │   └── ...                 # Other command groups
+│   │   ├── hal/                    # Hardware abstraction
+│   │   │   └── uart.h              # UART interface (send/receive)
+│   │   └── utils/                  # Utilities (logging, buffers)
+│   ├── src/                        # Source files
+│   │   ├── hal/                    # Hardware-specific implementations
+│   │   │   └── stm32_uart.c        # STM32 UART implementation
+│   │   ├── at/                     # AT command logic
+│   │   │   ├── wifi.c              # Wi-Fi command implementations
+│   │   │   ├── tcp.c               # TCP command implementations
+│   │   │   └── core.c              # Core AT handler (parsing, responses)
+│   │   ├── main.c                  # Entry point
+│   │   └── utils/                  # Shared utilities
+│   ├── platformio.ini              # PlatformIO configuration for STM32
+│   └── tests/                      # Unit/integration tests for STM32
+│       ├── unit/                   # AT command parser tests
+│       └── integration/            # Full UART ↔ ESP32 tests
+├── docs/                           # Documentation
+│   ├── commands.md                 # AT command reference
+│   ├── wiring.md                   # Hardware connections
+│   ├── flashing_esp32.md           # Instructions to flash ESP32 with AT firmware
+│   └── porting.md                  # Adding new STM32 boards
+├── scripts/                        # Helper scripts (e.g., flash ESP32)
+│   └── flash_esp32.sh              # Script to flash ESP32 with AT firmware
+├── examples/                       # Demo projects
+│   ├── stm32_wifi_connect/         # STM32 example: Connect to Wi-Fi
+│   ├── stm32_http_client/          # STM32 example: Send HTTP requests
+│   └── ...                         # Additional examples
+├── LICENSE                         # Project license (e.g., MIT)
+├── README.md                       # Project overview and setup instructions
+└── .gitignore                      # Git ignore file (e.g., .pio/, *.bin)
 ```
 
-## Repository Description
+## 🎯 Milestones
 
-This repository is a **platform for AT command communication** between the ESP32-C3 Dev Kit v2 and the STM32F030R8 Nucleo board. It includes everything needed to:
-- Flash AT firmware to the ESP32-C3.
-- Set up UART communication between the two boards.
-- Send and receive AT commands.
-- Build Wi-Fi-enabled applications using the ESP32 as a Wi-Fi module.
+Track the progress of the project by marking each milestone and its subtasks as complete. Simply replace `[ ]` with `[x]` when a task is done.
 
-## Features
+### [ ] **Milestone 1: Repository Setup & Initial Documentation**
 
-- **UART Communication**: Establishes robust UART communication between STM32 and ESP32.
-- **AT Command Handling**: Send and receive AT commands to configure the ESP32 and perform actions like connecting to Wi-Fi.
-- **Wi-Fi Control**: Enables the STM32 to control the ESP32 for Wi-Fi-based tasks (e.g., HTTP requests, TCP/UDP communication).
-- **Extensibility**: Provides a modular design to extend the functionality.
+- [ ] **Create Repository Structure**
+  - Set up directories as outlined above.
+- [ ] **Initialize Git and `.gitignore`**
+  - Initialize Git.
+  - Create `.gitignore` to exclude build artifacts.
+  - Commit the initial structure.
+- [ ] **Draft `README.md`**
+  - Provide an overview, repository structure, supported boards, and high-level setup instructions.
+- [ ] **Create Essential Documentation**
+  - `docs/wiring.md`: Describe UART connections between STM32 and ESP32.
+  - `docs/flashing_esp32.md`: Instructions to flash ESP32 with AT firmware.
+  - `docs/commands.md`: Reference for supported AT commands.
+  - `docs/porting.md`: Guide on adding new STM32 boards.
+- [ ] **Add License**
+  - Choose and add an appropriate license (e.g., MIT).
+- [ ] **Prepare `CONTRIBUTING.md`**
+  - Outline how others can contribute to the project.
 
-## Setup Instructions
-
-### 1. Flash ESP32 with AT Firmware
-1. Download the [AT firmware](https://www.espressif.com/).
-2. Use `esptool.py` to flash the firmware:
-   ```bash
-   esptool.py --chip esp32 --port COMx --baud 115200 write_flash -z 0x1000 AT-firmware.bin
-   ```
-3. Verify the ESP32 responds to AT commands using a serial terminal.
-
-### 2. Hardware Connections
-- Connect the STM32 and ESP32 via UART:
-  - **STM32 TX** → **ESP32 RX**
-  - **STM32 RX** → **ESP32 TX**
-  - **GND** → **GND**
-- Refer to the `wiring_diagram.png` in the `doc` folder for details.
-
-### 3. Build and Upload ESP32 Code
-1. Navigate to the `esp32_project/` directory.
-2. Open the project in PlatformIO IDE or use the terminal:
-   ```bash
-   pio run --target upload
-   ```
-3. Monitor serial output for debugging:
-   ```bash
-   pio device monitor
-   ```
-
-### 4. Build and Upload STM32 Code
-1. Navigate to the `stm32_project/` directory.
-2. Open the project in PlatformIO IDE or use the terminal:
-   ```bash
-   pio run --target upload
-   ```
-
-## Usage
-
-1. Power up the STM32 and ESP32.
-2. Open a serial monitor to view debug output from the STM32.
-3. Send AT commands from the STM32 to the ESP32 (e.g., `AT+CWJAP="SSID","PASSWORD"`).
-4. Observe responses from the ESP32 and verify functionality.
-
-## Contributing
-
-Contributions are welcome! Feel free to submit issues, feature requests, or pull requests to enhance the functionality.
-
-## License
+## 📜 License
 
 This project is licensed under the [MIT License](LICENSE).
+
+## 🛠 Setup Instructions
+
+Detailed setup instructions will be provided in subsequent milestones.
+
+## 📚 Additional Resources
+
+- [Espressif AT Firmware Guide](https://docs.espressif.com/projects/esp-at/en/latest/)
+- [PlatformIO Documentation](https://docs.platformio.org/)
+- [STM32Cube HAL API Reference](https://www.st.com/en/development-tools/stm32cubef0.html)
+- [Unity Test Framework](http://www.throwtheswitch.org/unity)
+
+---
+
+**Happy Coding!** 🚀
