@@ -1,0 +1,14 @@
+# PlatformIO build directory
+.pio/
+
+# Build artifacts
+*.bin
+*.elf
+*.hex
+
+# VSCode settings
+.vscode/
+
+# Other temporary files
+*.tmp
+*.log
