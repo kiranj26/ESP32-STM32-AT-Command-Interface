@@ -1,40 +1,4 @@
-# ESP32-STM32 AT Command Interface
-
-## 📘 Project Overview
-
-The **ESP32-STM32 AT Command Interface** project establishes communication between an **ESP32-C3** module and an **STM32** microcontroller using AT commands over UART. This setup allows the STM32 to leverage the Wi-Fi and BLE capabilities of the ESP32-C3 by sending standardized AT commands.
-
----
-
-## 📂 Folder Structure
-
-Here's an overview of the repository's folder structure:
-```
-    esp32/
-    ├── esp-at-firmware
-    │   └── ESP32-C3-MINI-1-AT-V3.3.0.0
-    │       └── ESP32-C3-MINI-1-AT-V3.3.0.0
-    │           ├── bootloader
-    │           ├── customized_partitions
-    │           ├── factory
-    │           └── partition_table
-    ├── stm32_project
-    ├── scripts
-    ├── examples
-    ├── docs
-    ├── LICENSE
-    ├── README.md
-    └── CONTRIBUTING.md
-```
-**Folder Descriptions:**
-```
-- `esp32/esp-at-firmware/ESP32-C3-MINI-1-AT-V3.3.0.0/`: Contains the official AT firmware binaries and related files for the ESP32-C3-MINI-1 module.
-  - `bootloader/`: Bootloader binary files.
-  - `customized_partitions/`: Custom partition tables and related binaries.
-  - `factory/`: Factory preset configurations and binaries.
-  - `partition_table/`: Partition table binaries defining memory layout.
-```
----
+# ESP32 AT Firmware Flashing 
 
 ## ⚙️ Prerequisites
 
