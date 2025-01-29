@@ -43,30 +43,6 @@ ESP32-STM32_AT_Interface/
 └── .gitignore                      # Git ignore file (e.g., .pio/, *.bin)
 ```
 
-## 🎯 Milestones
-
-Track the progress of the project by marking each milestone and its subtasks as complete. Simply replace `[ ]` with `[x]` when a task is done.
-
-### [ ] **Milestone 1: Repository Setup & Initial Documentation**
-
-- [ ] **Create Repository Structure**
-  - Set up directories as outlined above.
-- [ ] **Initialize Git and `.gitignore`**
-  - Initialize Git.
-  - Create `.gitignore` to exclude build artifacts.
-  - Commit the initial structure.
-- [ ] **Draft `README.md`**
-  - Provide an overview, repository structure, supported boards, and high-level setup instructions.
-- [ ] **Create Essential Documentation**
-  - `docs/wiring.md`: Describe UART connections between STM32 and ESP32.
-  - `docs/flashing_esp32.md`: Instructions to flash ESP32 with AT firmware.
-  - `docs/commands.md`: Reference for supported AT commands.
-  - `docs/porting.md`: Guide on adding new STM32 boards.
-- [ ] **Add License**
-  - Choose and add an appropriate license (e.g., MIT).
-- [ ] **Prepare `CONTRIBUTING.md`**
-  - Outline how others can contribute to the project.
-
 ## 📜 License
 
 This project is licensed under the [MIT License](LICENSE).
