@@ -84,15 +84,15 @@ Track the progress of the project by marking each milestone and its subtasks as 
 
 ### [ ] **Milestone 3: Flash ESP32 with Official AT Firmware and Verify Communication**
 
-- [ ] **Download Official AT Firmware**
+- [x] **Download Official AT Firmware**
   - Obtain the latest AT firmware compatible with ESP32-C3 from Espressif's repository.
-- [ ] **Prepare Flashing Script**
+- [x] **Prepare Flashing Script**
   - Create `scripts/flash_esp32.sh` with necessary commands.
-- [ ] **Flash ESP32**
+- [x] **Flash ESP32**
   - Execute the flashing script to install AT firmware on ESP32.
-- [ ] **Verify AT Firmware Installation**
+- [x] **Verify AT Firmware Installation**
   - Use a serial terminal to send the `AT` command and expect an `OK` response.
-- [ ] **Troubleshoot Flashing Issues**
+- [x] **Troubleshoot Flashing Issues**
   - Address any problems encountered during flashing.
 
 ### [ ] **Milestone 4: Implement Basic AT Command Communication from STM32 to ESP32**
