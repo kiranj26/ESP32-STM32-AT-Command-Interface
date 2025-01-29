@@ -1,7 +1,7 @@
+/* main.c */
+
 #include "hal/uart.h"
 #include "stm32f0xx_hal.h"
-
-#include <stdio.h>
 #include <string.h>
 
 /* Function prototypes */
@@ -10,19 +10,8 @@ static void MX_GPIO_Init(void);
 
 /* Function to handle received UART data */
 void uart_rx_handler(uint8_t received_byte) {
-    // Example: Echo received data
+    // Echo the received byte
     uart_send(&received_byte, 1);
-
-    // Future: Process received data or trigger events
-}
-
-/* Implementing printf over UART using buffer */
-int __io_putchar(int ch) {
-    uint8_t c = (uint8_t)ch;
-    if (uart_send(&c, 1) != HAL_OK) {
-        // Handle UART send error (optional)
-    }
-    return ch;
 }
 
 int main(void)
@@ -45,10 +34,12 @@ int main(void)
         }
     }
 
+    /* Set the UART receive callback */
     uart_set_rx_callback(uart_rx_handler);
 
-    /* Print "UART is initialized" message */
-    printf("UART is initialized with interrupts\r\n");
+    /* Send a test string over UART */
+    const char *test_string = "UART is initialized with interrupts\r\n";
+    uart_send((uint8_t *)test_string, strlen(test_string));
 
     /* Main loop: blink LED */
     while (1)
@@ -56,8 +47,6 @@ int main(void)
         /* Toggle the user LED on PA5 every 500ms */
         HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_5);
         HAL_Delay(500);
-
-        /* Other non-blocking tasks can be performed here */
     }
 }
 
@@ -85,10 +74,10 @@ void SystemClock_Config(void)
     }
 
     /* 2) Initialize CPU, AHB, and APB clocks to 8MHz */
-    RCC_ClkInitStruct.ClockType      = RCC_CLOCKTYPE_SYSCLK | RCC_CLOCKTYPE_HCLK | RCC_CLOCKTYPE_PCLK1;
-    RCC_ClkInitStruct.SYSCLKSource   = RCC_SYSCLKSOURCE_HSI;  // 8MHz
-    RCC_ClkInitStruct.AHBCLKDivider  = RCC_SYSCLK_DIV1;
-    RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV1;
+    RCC_ClkInitStruct.ClockType       = RCC_CLOCKTYPE_SYSCLK | RCC_CLOCKTYPE_HCLK | RCC_CLOCKTYPE_PCLK1;
+    RCC_ClkInitStruct.SYSCLKSource    = RCC_SYSCLKSOURCE_HSI;  // 8MHz
+    RCC_ClkInitStruct.AHBCLKDivider   = RCC_SYSCLK_DIV1;
+    RCC_ClkInitStruct.APB1CLKDivider  = RCC_HCLK_DIV1;
     if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_0) != HAL_OK)
     {
         /* Initialization Error */

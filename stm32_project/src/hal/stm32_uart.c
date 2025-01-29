@@ -1,6 +1,9 @@
+/* stm32_uart.c */
+
 #include "hal/uart.h"
 #include "stm32f0xx_hal.h"
 #include <string.h>
+#include <stdbool.h>
 
 /* Static UART Handle */
 static UART_HandleTypeDef huart1;
@@ -38,7 +41,7 @@ HAL_StatusTypeDef uart_init(void) {
 
     /* Configure RX (PA10) as alternate function input */
     GPIO_InitStruct.Pin       = GPIO_PIN_10;
-    GPIO_InitStruct.Mode      = GPIO_MODE_INPUT;
+    GPIO_InitStruct.Mode      = GPIO_MODE_AF_PP;
     GPIO_InitStruct.Pull      = GPIO_NOPULL;
     GPIO_InitStruct.Alternate = GPIO_AF1_USART1;
     HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
@@ -64,7 +67,7 @@ HAL_StatusTypeDef uart_init(void) {
     HAL_NVIC_EnableIRQ(USART1_IRQn);
 
     /* Start UART reception in interrupt mode */
-    if (HAL_UART_Receive_IT(&huart1, (uint8_t *)&rx_buffer[rx_head], 1) != HAL_OK) {
+    if (HAL_UART_Receive_IT(&huart1, &rx_buffer[rx_head], 1) != HAL_OK) {
         return HAL_ERROR;
     }
 
@@ -117,23 +120,26 @@ void USART1_IRQHandler(void) {
 /* UART Receive Complete Callback */
 void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart) {
     if (huart->Instance == USART1) {
-        /* Store the current head before incrementing */
-        uint16_t current_head = rx_head;
+        /* Retrieve the received byte */
+        uint8_t received_byte = rx_buffer[rx_head];
+
+        /* Update head */
         rx_head = (rx_head + 1) % RX_BUFFER_SIZE;
 
         /* Check for buffer overflow */
         if (rx_head == rx_tail) {
+            // Buffer overflow, move tail
             rx_tail = (rx_tail + 1) % RX_BUFFER_SIZE;
         }
 
-        /* Start receiving next byte */
-        if (HAL_UART_Receive_IT(&huart1, (uint8_t *)&rx_buffer[rx_head], 1) != HAL_OK) {
+        /* Re-enable UART reception */
+        if (HAL_UART_Receive_IT(&huart1, &rx_buffer[rx_head], 1) != HAL_OK) {
             // Handle error
         }
 
         /* Invoke callback with the received data */
         if (rx_callback) {
-            rx_callback(rx_buffer[current_head]);
+            rx_callback(received_byte);
         }
     }
 }
