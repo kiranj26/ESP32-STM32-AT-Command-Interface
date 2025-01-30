@@ -3,16 +3,18 @@
 #include "hal/uart.h"
 #include "stm32f0xx_hal.h"
 #include <string.h>
+#include <stdio.h> // Added for snprintf
 
 /* Function prototypes */
 void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
 
-/* Function to handle received UART data */
-void uart_rx_handler(uint8_t received_byte) {
-    // Echo the received byte
-    uart_send(&received_byte, 1);
-}
+/* Callback function prototypes */
+void uart1_rx_handler(uint8_t received_byte);
+void uart2_rx_handler(uint8_t received_byte);
+
+/* Function to send AT commands */
+void send_at_command(const char *command);
 
 int main(void)
 {
@@ -25,28 +27,49 @@ int main(void)
     /* Initialize GPIO (for LED on PA5) */
     MX_GPIO_Init();
 
-    /* Initialize UART and set receive callback */
-    if (uart_init() != HAL_OK) {
-        // Handle UART initialization error (e.g., blink LED rapidly)
+    /* Initialize USART1 and USART2 */
+    if (uart_init(UART1_INSTANCE) != HAL_OK) {
+        // Handle UART1 initialization error (e.g., blink LED rapidly)
         while (1) {
             HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_5);
             HAL_Delay(100);
         }
     }
 
-    /* Set the UART receive callback */
-    uart_set_rx_callback(uart_rx_handler);
+    if (uart_init(UART2_INSTANCE) != HAL_OK) {
+        // Handle UART2 initialization error (e.g., blink LED rapidly)
+        while (1) {
+            HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_5);
+            HAL_Delay(100);
+        }
+    }
 
-    /* Send a test string over UART */
-    const char *test_string = "UART is initialized with interrupts\r\n";
-    uart_send((uint8_t *)test_string, strlen(test_string));
+    /* Set the UART1 receive callback */
+    uart_set_rx_callback(UART1_INSTANCE, uart1_rx_handler);
 
-    /* Main loop: blink LED */
+    /* Set the UART2 receive callback */
+    uart_set_rx_callback(UART2_INSTANCE, uart2_rx_handler);
+
+    /* Send a test string over USART2 (e.g., to PC) */
+    /* const char *test_string = "USART2 initialized for debugging\r\n";
+    uart_send(UART2_INSTANCE, (uint8_t *)test_string, strlen(test_string)); */
+
+    /* Send an initial AT command to ESP32 via USART1 */
+    send_at_command("AT+GMR\r\n");
+
+    /* Main loop: blink LED and periodically send AT commands */
     while (1)
     {
         /* Toggle the user LED on PA5 every 500ms */
         HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_5);
         HAL_Delay(500);
+
+        /* Example: Send another AT command every 5 seconds */
+        static uint32_t last_send_time = 0;
+        if (HAL_GetTick() - last_send_time > 5000) {
+            send_at_command("AT\r\n"); // Example AT command to get firmware version
+            last_send_time = HAL_GetTick();
+        }
     }
 }
 
@@ -108,8 +131,31 @@ static void MX_GPIO_Init(void)
 }
 
 /* --------------------------------------------------------------------------
-   SysTick Handler for the HAL time base
+   Callback Functions
    -------------------------------------------------------------------------- */
+
+/* Function to handle received UART1 data (from ESP32) */
+void uart1_rx_handler(uint8_t received_byte) {
+    // Forward the received byte to USART2
+    uart_send(UART2_INSTANCE, &received_byte, 1);
+}
+
+/* Function to handle received UART2 data (from PC) */
+void uart2_rx_handler(uint8_t received_byte) {
+    // Forward the received byte to USART1
+    uart_send(UART1_INSTANCE, &received_byte, 1);
+}
+
+/* Function to send AT command */
+void send_at_command(const char *command) {
+    uart_send(UART1_INSTANCE, (uint8_t *)command, strlen(command));
+}
+
+/* --------------------------------------------------------------------------
+   SysTick Handler
+   -------------------------------------------------------------------------- */
+
+/* Remove any SysTick_Handler from main.c to avoid multiple definitions */
 void SysTick_Handler(void)
 {
     HAL_IncTick();
