@@ -3,75 +3,62 @@
 #include "hal/uart.h"
 #include "stm32f0xx_hal.h"
 #include <string.h>
-#include <stdio.h> // Added for snprintf
+#include <stdio.h>
 
-/* Function prototypes */
 void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
-
-/* Callback function prototypes */
-void uart1_rx_handler(uint8_t received_byte);
-void uart2_rx_handler(uint8_t received_byte);
-
-/* Function to send AT commands */
 void send_at_command(const char *command);
 
-int main(void)
-{
-    /* Initialize the HAL library (includes setting up SysTick) */
+/* Callbacks now handle buffer pointers */
+void uart1_rx_handler(uint8_t *data, uint16_t len);
+void uart2_rx_handler(uint8_t *data, uint16_t len);
+
+int main(void) {
     HAL_Init();
-
-    /* Configure the system clock */
     SystemClock_Config();
-
-    /* Initialize GPIO (for LED on PA5) */
     MX_GPIO_Init();
 
-    /* Initialize USART1 and USART2 */
     if (uart_init(UART1_INSTANCE) != HAL_OK) {
-        // Handle UART1 initialization error (e.g., blink LED rapidly)
-        while (1) {
-            HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_5);
-            HAL_Delay(100);
-        }
+        while (1) { HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_5); HAL_Delay(100); }
     }
 
     if (uart_init(UART2_INSTANCE) != HAL_OK) {
-        // Handle UART2 initialization error (e.g., blink LED rapidly)
-        while (1) {
-            HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_5);
-            HAL_Delay(100);
-        }
+        while (1) { HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_5); HAL_Delay(100); }
     }
 
-    /* Set the UART1 receive callback */
     uart_set_rx_callback(UART1_INSTANCE, uart1_rx_handler);
-
-    /* Set the UART2 receive callback */
     uart_set_rx_callback(UART2_INSTANCE, uart2_rx_handler);
 
-    /* Send a test string over USART2 (e.g., to PC) */
-    /* const char *test_string = "USART2 initialized for debugging\r\n";
-    uart_send(UART2_INSTANCE, (uint8_t *)test_string, strlen(test_string)); */
-
-    /* Send an initial AT command to ESP32 via USART1 */
     send_at_command("AT+GMR\r\n");
 
-    /* Main loop: blink LED and periodically send AT commands */
-    while (1)
-    {
-        /* Toggle the user LED on PA5 every 500ms */
+    while (1) {
         HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_5);
         HAL_Delay(500);
 
-        /* Example: Send another AT command every 5 seconds */
         static uint32_t last_send_time = 0;
         if (HAL_GetTick() - last_send_time > 5000) {
-            send_at_command("AT\r\n"); // Example AT command to get firmware version
+            send_at_command("AT\r\n");
             last_send_time = HAL_GetTick();
         }
     }
 }
+
+/* Updated callbacks in main.c */
+void uart1_rx_handler(uint8_t *data, uint16_t len) {
+    uart_send(UART2_INSTANCE, data, len);
+}
+
+void uart2_rx_handler(uint8_t *data, uint16_t len) {
+    uart_send(UART1_INSTANCE, data, len);
+}
+
+/* Remove the old byte-by-byte handlers from main.c */
+
+void send_at_command(const char *command) {
+    uart_send(UART1_INSTANCE, (uint8_t *)command, strlen(command));
+}
+
+/* Clock and GPIO config unchanged from original */
 
 /**
   * @brief  System Clock Configuration
