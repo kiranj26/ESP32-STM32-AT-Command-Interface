@@ -1,11 +1,15 @@
 #include "stm32f0xx_hal.h"
+#include <string.h>
 
-/* Peripheral handle declarations */
+#define FIXED_RX_SIZE 4
+
 UART_HandleTypeDef huart1;
 DMA_HandleTypeDef hdma_usart1_tx;
 DMA_HandleTypeDef hdma_usart1_rx;
 
-/* Function prototypes */
+uint8_t txData[] = "Hello via DMA USART1\r\n";
+uint8_t fixedRxBuffer[FIXED_RX_SIZE];
+
 void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
 static void MX_DMA_Init(void);
@@ -14,29 +18,19 @@ void Error_Handler(void);
 
 int main(void)
 {
-    /* Reset of all peripherals, Initializes the Flash interface and the Systick. */
     HAL_Init();
-
-    /* Configure the system clock */
     SystemClock_Config();
-
-    /* Initialize all configured peripherals */
     MX_GPIO_Init();
     MX_DMA_Init();
     MX_USART1_UART_Init();
 
-    /* Example data buffers */
-    uint8_t txData[] = "Hello via DMA USART1\r\n";
-    uint8_t rxData[32] = {0};
-
-    /* Start receiving data in DMA mode (blocking here for demo purposes,
-       in a real app consider using interrupts or callbacks) */
-    if (HAL_UART_Receive_DMA(&huart1, rxData, sizeof(rxData)) != HAL_OK)
+    // Start RX FIRST to avoid HAL_BUSY state
+    if (HAL_UART_Receive_DMA(&huart1, fixedRxBuffer, FIXED_RX_SIZE) != HAL_OK)
     {
         Error_Handler();
     }
 
-    /* Transmit data via DMA */
+    // Then start TX
     if (HAL_UART_Transmit_DMA(&huart1, txData, sizeof(txData) - 1) != HAL_OK)
     {
         Error_Handler();
@@ -44,11 +38,11 @@ int main(void)
 
     while (1)
     {
-        /* Your application loop */
+        __asm("nop"); // Minimal CPU load
     }
 }
 
-/* USART1 init function */
+// USART1 Initialization
 static void MX_USART1_UART_Init(void)
 {
     huart1.Instance = USART1;
@@ -59,35 +53,24 @@ static void MX_USART1_UART_Init(void)
     huart1.Init.Mode = UART_MODE_TX_RX;
     huart1.Init.HwFlowCtl = UART_HWCONTROL_NONE;
     huart1.Init.OverSampling = UART_OVERSAMPLING_16;
+    
     if (HAL_UART_Init(&huart1) != HAL_OK)
     {
         Error_Handler();
     }
+
+    // Enable UART1 global interrupt
+    HAL_NVIC_SetPriority(USART1_IRQn, 0, 0);
+    HAL_NVIC_EnableIRQ(USART1_IRQn);
+    __HAL_UART_ENABLE_IT(&huart1, UART_IT_ERR);
 }
 
-/* DMA init function */
+// DMA Initialization
 static void MX_DMA_Init(void)
 {
-    /* DMA controller clock enable */
     __HAL_RCC_DMA1_CLK_ENABLE();
 
-    /* Configure DMA for USART1_RX */
-    hdma_usart1_rx.Instance = DMA1_Channel3;
-    hdma_usart1_rx.Init.Direction = DMA_PERIPH_TO_MEMORY;
-    hdma_usart1_rx.Init.PeriphInc = DMA_PINC_DISABLE;
-    hdma_usart1_rx.Init.MemInc = DMA_MINC_ENABLE;
-    hdma_usart1_rx.Init.PeriphDataAlignment = DMA_PDATAALIGN_BYTE;
-    hdma_usart1_rx.Init.MemDataAlignment = DMA_MDATAALIGN_BYTE;
-    hdma_usart1_rx.Init.Mode = DMA_NORMAL;  // Or DMA_CIRCULAR for continuous reception
-    hdma_usart1_rx.Init.Priority = DMA_PRIORITY_LOW;
-    if (HAL_DMA_Init(&hdma_usart1_rx) != HAL_OK)
-    {
-        Error_Handler();
-    }
-    /* Link DMA handle to UART handle for RX */
-    __HAL_LINKDMA(&huart1, hdmarx, hdma_usart1_rx);
-
-    /* Configure DMA for USART1_TX */
+    // TX Channel (USART1_TX -> DMA1 Channel 2)
     hdma_usart1_tx.Instance = DMA1_Channel2;
     hdma_usart1_tx.Init.Direction = DMA_MEMORY_TO_PERIPH;
     hdma_usart1_tx.Init.PeriphInc = DMA_PINC_DISABLE;
@@ -95,114 +78,141 @@ static void MX_DMA_Init(void)
     hdma_usart1_tx.Init.PeriphDataAlignment = DMA_PDATAALIGN_BYTE;
     hdma_usart1_tx.Init.MemDataAlignment = DMA_MDATAALIGN_BYTE;
     hdma_usart1_tx.Init.Mode = DMA_NORMAL;
-    hdma_usart1_tx.Init.Priority = DMA_PRIORITY_LOW;
+    hdma_usart1_tx.Init.Priority = DMA_PRIORITY_HIGH;
+    
     if (HAL_DMA_Init(&hdma_usart1_tx) != HAL_OK)
     {
         Error_Handler();
     }
-    /* Link DMA handle to UART handle for TX */
     __HAL_LINKDMA(&huart1, hdmatx, hdma_usart1_tx);
 
-    /* Configure DMA interrupt (for both channel 2 & 3 if needed) */
+    // RX Channel (USART1_RX -> DMA1 Channel 3)
+    hdma_usart1_rx.Instance = DMA1_Channel3;
+    hdma_usart1_rx.Init.Direction = DMA_PERIPH_TO_MEMORY;
+    hdma_usart1_rx.Init.PeriphInc = DMA_PINC_DISABLE;
+    hdma_usart1_rx.Init.MemInc = DMA_MINC_ENABLE;
+    hdma_usart1_rx.Init.PeriphDataAlignment = DMA_PDATAALIGN_BYTE;
+    hdma_usart1_rx.Init.MemDataAlignment = DMA_MDATAALIGN_BYTE;
+    hdma_usart1_rx.Init.Mode = DMA_CIRCULAR; // Changed to circular mode
+    hdma_usart1_rx.Init.Priority = DMA_PRIORITY_VERY_HIGH;
+    
+    if (HAL_DMA_Init(&hdma_usart1_rx) != HAL_OK)
+    {
+        Error_Handler();
+    }
+    __HAL_LINKDMA(&huart1, hdmarx, hdma_usart1_rx);
+
+    // DMA Interrupts
     HAL_NVIC_SetPriority(DMA1_Channel2_3_IRQn, 0, 0);
     HAL_NVIC_EnableIRQ(DMA1_Channel2_3_IRQn);
 }
 
-/* Example GPIO init function (if you use pins for other purposes) */
+// GPIO Initialization
 static void MX_GPIO_Init(void)
 {
-    /* Enable GPIO clocks, configure pins etc. if necessary */
-    __HAL_RCC_GPIOA_CLK_ENABLE();
-    /* USART1 TX/RX pins will be configured by HAL_UART_MspInit */
+    // PA9/PA10 configured in HAL_UART_MspInit
 }
 
-/* System Clock Configuration (modify as per your requirements) */
+// Clock Configuration (48 MHz from HSI PLL)
 void SystemClock_Config(void)
 {
     RCC_OscInitTypeDef RCC_OscInitStruct = {0};
     RCC_ClkInitTypeDef RCC_ClkInitStruct = {0};
 
-    /* Configure the main internal regulator output voltage */
     __HAL_RCC_PWR_CLK_ENABLE();
-    /* Setup oscillators (here we use HSI as an example) */
+    // __HAL_PWR_VOLTAGESCALING_CONFIG(PWR_REGULATOR_VOLTAGE_SCALE1);
+
     RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSI;
-    RCC_OscInitStruct.HSIState       = RCC_HSI_ON;
+    RCC_OscInitStruct.HSIState = RCC_HSI_ON;
     RCC_OscInitStruct.HSICalibrationValue = RCC_HSICALIBRATION_DEFAULT;
-    RCC_OscInitStruct.PLL.PLLState   = RCC_PLL_NONE;
+    RCC_OscInitStruct.PLL.PLLState = RCC_PLL_ON;
+    RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSI;
+    RCC_OscInitStruct.PLL.PLLMUL = RCC_PLL_MUL12;
+    RCC_OscInitStruct.PLL.PREDIV = RCC_PREDIV_DIV2;
+    
     if (HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK)
     {
         Error_Handler();
     }
-    /* Initialize CPU, AHB and APB buses clocks */
-    RCC_ClkInitStruct.ClockType      = RCC_CLOCKTYPE_HCLK|RCC_CLOCKTYPE_SYSCLK
-                                     |RCC_CLOCKTYPE_PCLK1;
-    RCC_ClkInitStruct.SYSCLKSource   = RCC_SYSCLKSOURCE_HSI;
-    RCC_ClkInitStruct.AHBCLKDivider  = RCC_SYSCLK_DIV1;
-    RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV1;
 
-    if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_0) != HAL_OK)
+    RCC_ClkInitStruct.ClockType = RCC_CLOCKTYPE_HCLK|RCC_CLOCKTYPE_SYSCLK|RCC_CLOCKTYPE_PCLK1;
+    RCC_ClkInitStruct.SYSCLKSource = RCC_SYSCLKSOURCE_PLLCLK;
+    RCC_ClkInitStruct.AHBCLKDivider = RCC_SYSCLK_DIV1;
+    RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV1;
+    
+    if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_1) != HAL_OK)
     {
         Error_Handler();
     }
 }
 
-/* DMA interrupt handler */
+// Interrupt Handlers
 void DMA1_Channel2_3_IRQHandler(void)
 {
     HAL_DMA_IRQHandler(&hdma_usart1_tx);
     HAL_DMA_IRQHandler(&hdma_usart1_rx);
 }
 
-/* Override the weak MSP init for UART to configure GPIOs and clocks */
+void USART1_IRQHandler(void)
+{
+    HAL_UART_IRQHandler(&huart1);
+}
+
+// MSP Initialization
 void HAL_UART_MspInit(UART_HandleTypeDef* uartHandle)
 {
     GPIO_InitTypeDef GPIO_InitStruct = {0};
-    if(uartHandle->Instance==USART1)
+    if(uartHandle->Instance == USART1)
     {
-        /* Enable USART1 clock */
         __HAL_RCC_USART1_CLK_ENABLE();
-        /* Enable GPIO clocks (Assuming PA9 = TX, PA10 = RX on your board) */
         __HAL_RCC_GPIOA_CLK_ENABLE();
         
-        /**USART1 GPIO Configuration
-          PA9  ------> USART1_TX
-          PA10 ------> USART1_RX
-        */
-        GPIO_InitStruct.Pin       = GPIO_PIN_9 | GPIO_PIN_10;
-        GPIO_InitStruct.Mode      = GPIO_MODE_AF_PP;
-        GPIO_InitStruct.Pull      = GPIO_PULLUP;
-        GPIO_InitStruct.Speed     = GPIO_SPEED_FREQ_HIGH;
+        GPIO_InitStruct.Pin = GPIO_PIN_9|GPIO_PIN_10;
+        GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
+        GPIO_InitStruct.Pull = GPIO_PULLUP;
+        GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
         GPIO_InitStruct.Alternate = GPIO_AF1_USART1;
         HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
     }
 }
 
-/* Override the weak MSP deinit for UART if needed */
-void HAL_UART_MspDeInit(UART_HandleTypeDef* uartHandle)
+// Callbacks
+void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 {
-    if(uartHandle->Instance==USART1)
+    if (huart->Instance == USART1)
     {
-        /* Disable USART1 clock */
-        __HAL_RCC_USART1_CLK_DISABLE();
+        // Echo received data
+        HAL_UART_Transmit_DMA(&huart1, fixedRxBuffer, FIXED_RX_SIZE);
         
-        /**USART1 GPIO Configuration
-          PA9  ------> USART1_TX
-          PA10 ------> USART1_RX
-        */
-        HAL_GPIO_DeInit(GPIOA, GPIO_PIN_9|GPIO_PIN_10);
-        
-        /* DMA deinitialization */
-        HAL_DMA_DeInit(uartHandle->hdmarx);
-        HAL_DMA_DeInit(uartHandle->hdmatx);
+        // Restart RX (not needed in CIRCULAR mode)
+        // HAL_UART_Receive_DMA(&huart1, fixedRxBuffer, FIXED_RX_SIZE);
     }
 }
 
-/* Simple Error Handler */
-void Error_Handler(void)
+void HAL_UART_ErrorCallback(UART_HandleTypeDef *huart)
 {
-    /* User can add his own implementation to report the HAL error return state */
-    while(1)
+    if (huart->Instance == USART1)
     {
-        /* Blink LED or stay in loop */
+        // Clear all error flags
+        __HAL_UART_CLEAR_PEFLAG(huart);
+        HAL_UART_Receive_DMA(&huart1, fixedRxBuffer, FIXED_RX_SIZE);
     }
 }
+
+void Error_Handler(void)
+{
+    __disable_irq();
+    while (1)
+    {
+        // Toggle LED or other error indication
+    }
+}
+
+#ifdef USE_FULL_ASSERT
+void assert_failed(uint8_t *file, uint32_t line)
+{
+    (void)file;
+    (void)line;
+    Error_Handler();
+}
+#endif
