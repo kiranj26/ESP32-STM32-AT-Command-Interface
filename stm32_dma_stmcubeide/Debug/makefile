@@ -60,8 +60,8 @@ all: main-build
 main-build: stm32_dma_stmcubeide.elf secondary-outputs
 
 # Tool invocations
-stm32_dma_stmcubeide.elf stm32_dma_stmcubeide.map: $(OBJS) $(USER_OBJS) /Users/kiran/STM32CubeIDE/workspace_1.9.0/stm32_dma_stmcubeide/STM32F030R8TX_FLASH.ld makefile objects.list $(OPTIONAL_TOOL_DEPS)
-	arm-none-eabi-gcc -o "stm32_dma_stmcubeide.elf" @"objects.list" $(USER_OBJS) $(LIBS) -mcpu=cortex-m0 -T"/Users/kiran/STM32CubeIDE/workspace_1.9.0/stm32_dma_stmcubeide/STM32F030R8TX_FLASH.ld" --specs=nosys.specs -Wl,-Map="stm32_dma_stmcubeide.map" -Wl,--gc-sections -static --specs=nano.specs -mfloat-abi=soft -mthumb -Wl,--start-group -lc -lm -Wl,--end-group
+stm32_dma_stmcubeide.elf stm32_dma_stmcubeide.map: $(OBJS) $(USER_OBJS) /Users/kiran/Documents/GitHub/ESP32-STM32-AT-Command-Interface/stm32_dma_stmcubeide/STM32F030R8TX_FLASH.ld makefile objects.list $(OPTIONAL_TOOL_DEPS)
+	arm-none-eabi-gcc -o "stm32_dma_stmcubeide.elf" @"objects.list" $(USER_OBJS) $(LIBS) -mcpu=cortex-m0 -T"/Users/kiran/Documents/GitHub/ESP32-STM32-AT-Command-Interface/stm32_dma_stmcubeide/STM32F030R8TX_FLASH.ld" --specs=nosys.specs -Wl,-Map="stm32_dma_stmcubeide.map" -Wl,--gc-sections -static --specs=nano.specs -mfloat-abi=soft -mthumb -Wl,--start-group -lc -lm -Wl,--end-group
 	@echo 'Finished building target: $@'
 	@echo ' '
 

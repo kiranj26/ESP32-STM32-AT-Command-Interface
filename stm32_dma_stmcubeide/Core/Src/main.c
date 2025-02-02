@@ -128,35 +128,31 @@ int main(void)
   /* Infinite loop */
   while (1)
   {
-	    if(HAL_GetTick() - last_cmd >= 10000)
+	    // Send "AT" every 10 seconds only if TX is idle
+	    if (HAL_GetTick() - last_cmd >= 10000 && !tx_busy)
 	    {
-	      if(!tx_busy)
-	      {
-	        if(HAL_UART_Transmit_DMA(&huart1, (uint8_t*)"AT\r\n", 4) != HAL_OK)
+	        if (HAL_UART_Transmit_DMA(&huart1, (uint8_t*)"AT\r\n", 4) == HAL_OK)
 	        {
-	          Error_Handler();
+	            tx_busy = 1;
+	            last_cmd = HAL_GetTick();
+	            HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_5);
 	        }
-	        tx_busy = 1;
-	        last_cmd = HAL_GetTick();
-	        HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_5);  // Optional LED toggle.
-	      }
 	    }
 
-	    // If a complete message (terminated by "\r\n") is received and TX is not busy, echo it.
-	    if(response_ready && !tx_busy)
+	    // Echo received message if ready
+	    if (response_ready && !tx_busy)
 	    {
-	        if(strlen(response_buffer) > 0)
+	        if (strlen(response_buffer) > 0)
 	        {
 	            char echo_msg[MAX_RESPONSE_LEN + 16];
 	            snprintf(echo_msg, sizeof(echo_msg), "\r\n[RX] %s\r\n", response_buffer);
-	            if(HAL_UART_Transmit_DMA(&huart1, (uint8_t*)echo_msg, strlen(echo_msg)) != HAL_OK)
+	            if (HAL_UART_Transmit_DMA(&huart1, (uint8_t*)echo_msg, strlen(echo_msg)) == HAL_OK)
 	            {
-	                Error_Handler();
+	                tx_busy = 1;
 	            }
-	            tx_busy = 1;
 	        }
 	        response_ready = 0;
-	        response_index = 0;  // Ensure fresh start for next message
+	        response_index = 0;
 	        memset(response_buffer, 0, MAX_RESPONSE_LEN);
 	    }
     /* USER CODE END WHILE */
@@ -305,42 +301,32 @@ static void MX_GPIO_Init(void)
   */
 void process_data_chunk(uint16_t start_pos, uint16_t length)
 {
-    // Process each character in the new chunk
     for (uint16_t i = 0; i < length; i++)
     {
         uint16_t pos = (start_pos + i) % RX_BUFFER_SIZE;
-        uint8_t current_char = rx_buffer[pos];
+        char c = rx_buffer[pos];
 
-        // Check for buffer overflow, etc. (optional)
+        // Check for buffer overflow
         if (response_index >= MAX_RESPONSE_LEN - 1)
         {
-            // If the response buffer is full, reset it.
-            response_index = 0;
+            response_index = 0; // Reset to avoid overflow
             memset(response_buffer, 0, MAX_RESPONSE_LEN);
             response_ready = 0;
-            // Optionally return or handle error
         }
 
-        // Store the character in the response buffer.
-        response_buffer[response_index] = current_char;
+        // Store character
+        response_buffer[response_index] = c;
         response_index++;
 
-        // If we detect a "\r\n" sequence in the response buffer:
-        if (response_index > 1 &&
+        // Check for "\r\n" in the last two bytes
+        if (response_index >= 2 &&
             response_buffer[response_index - 2] == '\r' &&
             response_buffer[response_index - 1] == '\n')
         {
-            // Terminate the string before the newline.
-            response_buffer[response_index - 2] = '\0';
+            response_buffer[response_index - 2] = '\0'; // Terminate at "\r"
             response_ready = 1;
-
-            // Update the global tail pointer to skip over the processed message.
-            // (start_pos + i + 1) is the new tail; adjust for wrap-around.
-            rx_tail = (start_pos + i + 1) % RX_BUFFER_SIZE;
-
-            // Reset the response index so that the next message starts fresh.
-            response_index = 0;
-            return;  // Stop processing further data for this idle event.
+            response_index = 0; // Reset for next message
+            break; // Exit to avoid processing remnants
         }
     }
 }

@@ -176,40 +176,22 @@ void USART1_IRQHandler(void)
 
 	  if (__HAL_UART_GET_FLAG(&huart1, UART_FLAG_IDLE))
 	  {
-	      __HAL_UART_CLEAR_IDLEFLAG(&huart1);
-	      HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_5);
+	    __HAL_UART_CLEAR_IDLEFLAG(&huart1);
+	    HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_5);
 
-	      // Get the current DMA head pointer.
-	      rx_head = RX_BUFFER_SIZE - hdma_usart1_rx.Instance->CNDTR;
+	    // Correctly calculate rx_head with modulo to handle wrap-around
+	    rx_head = (RX_BUFFER_SIZE - hdma_usart1_rx.Instance->CNDTR) % RX_BUFFER_SIZE;
 
-	      // If a complete message is already waiting, do not process new data,
-	      // just update the tail pointer to skip over any new/old data.
-	      if (response_ready)
-	      {
-	          rx_tail = rx_head;
-	      }
-	      else
-	      {
-	          uint16_t start = rx_tail;
-	          uint16_t end = rx_head;
+	    // Calculate bytes received since last idle event
+	    uint16_t bytes_available = (rx_head >= rx_tail) ?
+	                               (rx_head - rx_tail) :
+	                               (RX_BUFFER_SIZE - rx_tail + rx_head);
 
-	          if (end >= start)
-	          {
-	              process_data_chunk(start, end - start);
-	          }
-	          else
-	          {
-	              process_data_chunk(start, RX_BUFFER_SIZE - start);
-	              process_data_chunk(0, end);
-	          }
-
-	          // If process_data_chunk() did not detect a complete message,
-	          // update the tail pointer to the current DMA head.
-	          if (!response_ready)
-	          {
-	              rx_tail = rx_head;
-	          }
-	      }
+	    if (bytes_available > 0)
+	    {
+	        process_data_chunk(rx_tail, bytes_available);
+	        rx_tail = (rx_tail + bytes_available) % RX_BUFFER_SIZE; // Update tail after processing
+	    }
 	  }
 
 
