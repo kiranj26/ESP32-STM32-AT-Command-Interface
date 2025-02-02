@@ -31,7 +31,8 @@ extern "C" {
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-
+#include <string.h>
+#include <stdio.h>
 /* USER CODE END Includes */
 
 /* Exported types ------------------------------------------------------------*/
@@ -54,6 +55,7 @@ void Error_Handler(void);
 
 /* USER CODE BEGIN EFP */
 
+
 /* USER CODE END EFP */
 
 /* Private defines -----------------------------------------------------------*/
@@ -70,6 +72,11 @@ void Error_Handler(void);
 #define TCK_Pin GPIO_PIN_14
 #define TCK_GPIO_Port GPIOA
 /* USER CODE BEGIN Private defines */
+/* USER CODE BEGIN Private defines */
+/* UART Buffers */
+#define RX_BUFFER_SIZE 100
+extern uint8_t rxBuffer[RX_BUFFER_SIZE];
+extern uint8_t rxByte;  // Declare rxByte as external
 
 /* USER CODE END Private defines */
 

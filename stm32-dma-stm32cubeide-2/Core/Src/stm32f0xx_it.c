@@ -55,10 +55,11 @@
 /* USER CODE END 0 */
 
 /* External variables --------------------------------------------------------*/
-extern DMA_HandleTypeDef hdma_usart1_tx;
+extern DMA_HandleTypeDef hdma_usart1_rx;
 extern UART_HandleTypeDef huart1;
 /* USER CODE BEGIN EV */
 
+uint16_t rxIndex = 0;  // Keep track of received characters
 /* USER CODE END EV */
 
 /******************************************************************************/
@@ -149,7 +150,7 @@ void DMA1_Channel2_3_IRQHandler(void)
   /* USER CODE BEGIN DMA1_Channel2_3_IRQn 0 */
 
   /* USER CODE END DMA1_Channel2_3_IRQn 0 */
-  HAL_DMA_IRQHandler(&hdma_usart1_tx);
+  HAL_DMA_IRQHandler(&hdma_usart1_rx);
   /* USER CODE BEGIN DMA1_Channel2_3_IRQn 1 */
 
   /* USER CODE END DMA1_Channel2_3_IRQn 1 */
@@ -161,7 +162,24 @@ void DMA1_Channel2_3_IRQHandler(void)
 void USART1_IRQHandler(void)
 {
   /* USER CODE BEGIN USART1_IRQn 0 */
+    /* Check if IDLE flag is set (indicating end of message) */
+    if (__HAL_UART_GET_FLAG(&huart1, UART_FLAG_IDLE))
+    {
+        /* Clear IDLE Flag */
+        __HAL_UART_CLEAR_IDLEFLAG(&huart1);
 
+        /* Get Number of Bytes Received */
+        uint16_t receivedBytes = RX_BUFFER_SIZE - __HAL_DMA_GET_COUNTER(&hdma_usart1_rx);
+
+        /* Stop DMA Reception Temporarily */
+        HAL_UART_DMAStop(&huart1);
+
+        /* Process Data: Echo the received message */
+        HAL_UART_Transmit_IT(&huart1, rxBuffer, receivedBytes);
+
+        /* Restart DMA Reception */
+        HAL_UART_Receive_DMA(&huart1, rxBuffer, RX_BUFFER_SIZE);
+    }
   /* USER CODE END USART1_IRQn 0 */
   HAL_UART_IRQHandler(&huart1);
   /* USER CODE BEGIN USART1_IRQn 1 */
@@ -174,8 +192,23 @@ void HAL_UART_TxCpltCallback(UART_HandleTypeDef *huart)
 {
     if (huart->Instance == USART1)
     {
-        /* Transmission Complete Interrupt Triggered */
-        HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_13);  // Toggle LED on PC13 (or any GPIO)
+        /* TX Completed, nothing to do here for now */
+    }
+}
+
+/* Callback when UART RX is complete */
+void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
+{
+    if (huart->Instance == USART1)
+    {
+        /* Process the received data byte by byte */
+        if (rxIndex < RX_BUFFER_SIZE - 1)
+        {
+            rxBuffer[rxIndex++] = rxBuffer[0];  // Store received byte
+        }
+
+        /* Restart reception for next byte */
+        HAL_UART_Receive_IT(&huart1, rxBuffer, 1);
     }
 }
 

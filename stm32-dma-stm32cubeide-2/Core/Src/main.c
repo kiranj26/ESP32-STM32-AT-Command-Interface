@@ -21,8 +21,6 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-#include "string.h"
-
 
 /* USER CODE END Includes */
 
@@ -42,11 +40,18 @@
 
 /* Private variables ---------------------------------------------------------*/
  UART_HandleTypeDef huart1;
-DMA_HandleTypeDef hdma_usart1_tx;
+DMA_HandleTypeDef hdma_usart1_rx;
 
 /* USER CODE BEGIN PV */
-uint8_t txMessage[] = "DMA UART TX Interrupt Test\r\n";
+uint8_t rxBuffer[RX_BUFFER_SIZE];
+uint8_t txMessage[] = "AT+GMR\r\n";  // AT command to send
+uint8_t rxByte;  // Single-byte RX buffer
 
+/* Function to Send AT Command via Interrupt */
+void SendATCommand_IT(char *command)
+{
+    HAL_UART_Transmit_IT(&huart1, (uint8_t*)command, strlen(command));
+}
 
 /* USER CODE END PV */
 
@@ -95,9 +100,16 @@ int main(void)
   MX_DMA_Init();
   MX_USART1_UART_Init();
   /* USER CODE BEGIN 2 */
-  /* Start DMA UART TX */
-  HAL_UART_Transmit_DMA(&huart1, txMessage, strlen((char*)txMessage));
+  HAL_Delay(2000);
 
+  /* Send AT Command using Interrupt */
+  SendATCommand_IT((char*)txMessage);
+
+  /* Enable IDLE Line Interrupt */
+  __HAL_UART_ENABLE_IT(&huart1, UART_IT_IDLE);
+
+  /* Start DMA RX */
+  HAL_UART_Receive_DMA(&huart1, rxBuffer, RX_BUFFER_SIZE);
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -186,7 +198,8 @@ static void MX_USART1_UART_Init(void)
     Error_Handler();
   }
   /* USER CODE BEGIN USART1_Init 2 */
-
+  HAL_NVIC_SetPriority(USART1_IRQn, 1, 0);
+  HAL_NVIC_EnableIRQ(USART1_IRQn);
   /* USER CODE END USART1_Init 2 */
 
 }
