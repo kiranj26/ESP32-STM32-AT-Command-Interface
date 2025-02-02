@@ -62,7 +62,7 @@ volatile uint8_t tx_busy = 0;
 // Timestamp for periodic AT command sending.
 volatile uint32_t last_cmd = 0;
 volatile uint16_t response_index = 0;  // Track position in response_buffer
-
+volatile char last_sent_cmd[32] = {0};  // Track the last command sent
 
 /* USER CODE END PV */
 
@@ -129,32 +129,44 @@ int main(void)
   while (1)
   {
 	    // Send "AT" every 10 seconds only if TX is idle
-	    if (HAL_GetTick() - last_cmd >= 10000 && !tx_busy)
-	    {
-	        if (HAL_UART_Transmit_DMA(&huart1, (uint8_t*)"AT\r\n", 4) == HAL_OK)
-	        {
-	            tx_busy = 1;
-	            last_cmd = HAL_GetTick();
-	            HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_5);
-	        }
-	    }
+		  // In main loop:
+		  if (HAL_GetTick() - last_cmd >= 10000 && !tx_busy)
+		  {
+			  strncpy((char*)last_sent_cmd, "AT\r\n", sizeof(last_sent_cmd));  // Save last command
+			  if (HAL_UART_Transmit_DMA(&huart1, (uint8_t*)"AT\r\n", 4) == HAL_OK)
+			  {
+				  tx_busy = 1;
+				  last_cmd = HAL_GetTick();
+				  HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_5);
+			  }
+		  }
 
 	    // Echo received message if ready
-	    if (response_ready && !tx_busy)
-	    {
-	        if (strlen(response_buffer) > 0)
-	        {
-	            char echo_msg[MAX_RESPONSE_LEN + 16];
-	            snprintf(echo_msg, sizeof(echo_msg), "\r\n[RX] %s\r\n", response_buffer);
-	            if (HAL_UART_Transmit_DMA(&huart1, (uint8_t*)echo_msg, strlen(echo_msg)) == HAL_OK)
-	            {
-	                tx_busy = 1;
-	            }
-	        }
-	        response_ready = 0;
-	        response_index = 0;
-	        memset(response_buffer, 0, MAX_RESPONSE_LEN);
-	    }
+		  // In main loop:
+		  if (response_ready && !tx_busy)
+		  {
+		      if (strlen(response_buffer) > 0)
+		      {
+		          // Check if the response matches the last sent command
+		          if (strstr(response_buffer, last_sent_cmd) == NULL)  // Only echo external data
+		          {
+		              char echo_msg[MAX_RESPONSE_LEN + 16];
+		              snprintf(echo_msg, sizeof(echo_msg), "\r\n[RX] %s\r\n", response_buffer);
+		              if (HAL_UART_Transmit_DMA(&huart1, (uint8_t*)echo_msg, strlen(echo_msg)) == HAL_OK)
+		              {
+		                  tx_busy = 1;
+		              }
+		          }
+		          else
+		          {
+		              // Clear the last_sent_cmd after handling
+		              memset((void*)last_sent_cmd, 0, sizeof(last_sent_cmd));
+		          }
+		      }
+		      response_ready = 0;
+		      response_index = 0;
+		      memset(response_buffer, 0, MAX_RESPONSE_LEN);
+		  }
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
