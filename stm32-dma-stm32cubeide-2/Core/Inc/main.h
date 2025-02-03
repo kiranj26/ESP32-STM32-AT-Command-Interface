@@ -74,8 +74,10 @@ void Error_Handler(void);
 /* USER CODE BEGIN Private defines */
 /* USER CODE BEGIN Private defines */
 /* UART Buffers */
-#define RX_BUFFER_SIZE 100
+#define RX_BUFFER_SIZE 256
 extern uint8_t rxBuffer[RX_BUFFER_SIZE];
+extern char receivedData[RX_BUFFER_SIZE];  // Variable to store response
+extern volatile uint16_t receivedLength;
 extern uint8_t rxByte;  // Declare rxByte as external
 
 /* USER CODE END Private defines */

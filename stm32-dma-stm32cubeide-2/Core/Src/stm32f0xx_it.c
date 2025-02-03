@@ -162,22 +162,25 @@ void DMA1_Channel2_3_IRQHandler(void)
 void USART1_IRQHandler(void)
 {
   /* USER CODE BEGIN USART1_IRQn 0 */
-    /* Check if IDLE flag is set (indicating end of message) */
     if (__HAL_UART_GET_FLAG(&huart1, UART_FLAG_IDLE))
     {
-        /* Clear IDLE Flag */
+        // Clear the IDLE flag
         __HAL_UART_CLEAR_IDLEFLAG(&huart1);
 
-        /* Get Number of Bytes Received */
-        uint16_t receivedBytes = RX_BUFFER_SIZE - __HAL_DMA_GET_COUNTER(&hdma_usart1_rx);
-
-        /* Stop DMA Reception Temporarily */
+        // Stop DMA reception
         HAL_UART_DMAStop(&huart1);
 
-        /* Process Data: Echo the received message */
-        HAL_UART_Transmit_IT(&huart1, rxBuffer, receivedBytes);
+        // Calculate the number of received bytes
+        receivedLength = RX_BUFFER_SIZE - __HAL_DMA_GET_COUNTER(&hdma_usart1_rx);
 
-        /* Restart DMA Reception */
+        // Copy the received data into the response buffer
+        memcpy(receivedData, rxBuffer, receivedLength);
+        receivedData[receivedLength] = '\0'; // Null-terminate the string
+
+        // Clear the RX buffer
+        memset(rxBuffer, 0, RX_BUFFER_SIZE);
+
+        // Restart DMA reception
         HAL_UART_Receive_DMA(&huart1, rxBuffer, RX_BUFFER_SIZE);
     }
   /* USER CODE END USART1_IRQn 0 */
@@ -193,22 +196,9 @@ void HAL_UART_TxCpltCallback(UART_HandleTypeDef *huart)
     if (huart->Instance == USART1)
     {
         /* TX Completed, nothing to do here for now */
-    }
-}
+        // printf("[DEBUG] UART1 TX complete\r\n"); // Confirm AT command sent
 
-/* Callback when UART RX is complete */
-void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
-{
-    if (huart->Instance == USART1)
-    {
-        /* Process the received data byte by byte */
-        if (rxIndex < RX_BUFFER_SIZE - 1)
-        {
-            rxBuffer[rxIndex++] = rxBuffer[0];  // Store received byte
-        }
 
-        /* Restart reception for next byte */
-        HAL_UART_Receive_IT(&huart1, rxBuffer, 1);
     }
 }
 

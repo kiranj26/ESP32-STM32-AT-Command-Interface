@@ -44,15 +44,8 @@ DMA_HandleTypeDef hdma_usart1_rx;
 
 /* USER CODE BEGIN PV */
 uint8_t rxBuffer[RX_BUFFER_SIZE];
-uint8_t txMessage[] = "AT+GMR\r\n";  // AT command to send
-uint8_t rxByte;  // Single-byte RX buffer
-
-/* Function to Send AT Command via Interrupt */
-void SendATCommand_IT(char *command)
-{
-    HAL_UART_Transmit_IT(&huart1, (uint8_t*)command, strlen(command));
-}
-
+char receivedData[RX_BUFFER_SIZE];  // Variable to store response
+volatile uint16_t receivedLength = 0; // Length of received data
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -100,16 +93,17 @@ int main(void)
   MX_DMA_Init();
   MX_USART1_UART_Init();
   /* USER CODE BEGIN 2 */
-  HAL_Delay(2000);
-
-  /* Send AT Command using Interrupt */
-  SendATCommand_IT((char*)txMessage);
-
-  /* Enable IDLE Line Interrupt */
+  HAL_Delay(5000); // Wait for ESP32 to stabilize
+  // Enable UART1 IDLE Interrupt
   __HAL_UART_ENABLE_IT(&huart1, UART_IT_IDLE);
 
-  /* Start DMA RX */
+  // Start DMA reception
   HAL_UART_Receive_DMA(&huart1, rxBuffer, RX_BUFFER_SIZE);
+
+  // Send AT command
+  const char *atCommand = "AT+UART_CUR?\r\n";
+  HAL_UART_Transmit_IT(&huart1, (uint8_t *)atCommand, strlen(atCommand));
+
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -119,6 +113,8 @@ int main(void)
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
+	HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_5); // Heartbeat LED
+
   }
   /* USER CODE END 3 */
 }
@@ -184,7 +180,7 @@ static void MX_USART1_UART_Init(void)
 
   /* USER CODE END USART1_Init 1 */
   huart1.Instance = USART1;
-  huart1.Init.BaudRate = 115100;
+  huart1.Init.BaudRate = 115200;
   huart1.Init.WordLength = UART_WORDLENGTH_8B;
   huart1.Init.StopBits = UART_STOPBITS_1;
   huart1.Init.Parity = UART_PARITY_NONE;
@@ -198,6 +194,9 @@ static void MX_USART1_UART_Init(void)
     Error_Handler();
   }
   /* USER CODE BEGIN USART1_Init 2 */
+  // Link DMA to USART1 RX
+  __HAL_LINKDMA(&huart1, hdmarx, hdma_usart1_rx);
+
   HAL_NVIC_SetPriority(USART1_IRQn, 1, 0);
   HAL_NVIC_EnableIRQ(USART1_IRQn);
   /* USER CODE END USART1_Init 2 */
